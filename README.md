@@ -1,0 +1,1 @@
+This project was developed in 48 hours for the 2020 IBM NA Intern Hackathon, remotely representing the RTP office.
