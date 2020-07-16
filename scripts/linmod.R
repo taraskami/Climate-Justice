@@ -1,3 +1,6 @@
+
+
+
 linmod <- lm(Temp ~ CO2, data=co2_temp_combined)
 new <- data.frame(CO2 = only2017$CO2)
 tempPredictions <- predict(linmod, newdata=new)

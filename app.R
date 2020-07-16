@@ -5,9 +5,14 @@ library(jsonlite)
 library(rgdal)
 
 
-# countries <- readOGR(dsn="./data/world_shape_file", 
-#                      layer="TM_WORLD_BORDERS_SIMPL-0.3",
-#                      verbose=FALSE)
+countries <- readOGR(dsn="./data/world_shape_file",
+                     layer="TM_WORLD_BORDERS_SIMPL-0.3",
+                     verbose=FALSE)
+map_data <- read.csv("map_data.csv")
+only2017 <- read.csv("only2017.csv")
+countries@data$TempPrediction <- only2017$TempPrediction
+countries@data$TempActuals <- only2017$TempActuals
+countries@data$Difference <- only2017$Difference
 
 pal <- colorQuantile(palette="YlOrRd", domain=only2017$Difference)
 
