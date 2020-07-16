@@ -82,9 +82,9 @@ ui <- bootstrapPage(
     fluidRow(
         tags$div(
             id = "filter",
-            actionButton("action", "Responsibility Index"),
+            actionButton("action1", "Home"),
             actionButton("action2", "CO2 Emissions"),
-            actionButton("action3", "Net Temperature Rise"),
+            actionButton("action3", "Net Temperature Change"),
             actionButton("action", "Natural Disaster Fatalities"),
             actionButton("action", "Population"),   
         )
@@ -114,6 +114,28 @@ ui <- bootstrapPage(
 
 server <- function(input, output, session) {
     
+    observeEvent(input$action1, {
+        
+        output$map <- renderLeaflet({
+            # Use leaflet() here, and only include aspects of the map that
+            # won't need to change dynamically (at least, not unless the
+            # entire map is being torn down and recreated).
+            leaflet(countries) %>%
+                setView(lng = 0, lat = 0, zoom = 3) %>%
+                addTiles() %>%
+                addPolygons(fillOpacity = 1, fillColor = ~pal(countries@data$Difference),
+                            label = mytext,
+                            labelOptions = labelOptions( 
+                                style = list("font-weight" = "normal", padding = "3px 8px"), 
+                                textsize = "13px", 
+                                direction = "auto"
+                            ))
+            
+        })
+        
+        
+    })
+        
     observeEvent(input$action2, {
         mybins <- c(0,5,7.5,10,12.5,15,20,40,70)
         
