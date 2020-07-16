@@ -5,18 +5,24 @@ library(jsonlite)
 library(rgdal)
 
 
-countries <- readOGR(dsn="./data/world_shape_file", 
-                     layer="TM_WORLD_BORDERS_SIMPL-0.3",
-                     verbose=FALSE)
+# countries <- readOGR(dsn="./data/world_shape_file", 
+#                      layer="TM_WORLD_BORDERS_SIMPL-0.3",
+#                      verbose=FALSE)
 
 pal <- colorQuantile(palette="YlOrRd", domain=only2017$Difference)
 
 mytext <- paste(
-    "Country: ", countries$NAME, "</br>",
-    "CO2: ", only2017$CO2, "</br>",
-    "Predicted Temperature:", only2017$TempPrediction, "</br>",
-    "Actual Temperature:", only2017$TempActuals, "</br>",
-    "Temperature Difference: ", countries$Difference
+    "Country: ", countries@data$NAME, "</br>",
+    "CO2 (2017): ", countries@data$CO2017, "</br>",
+    "Predicted Temperature:", 
+        ifelse(countries@data$TempPrediction == 0,
+               "Missing temp data", countries@data$TempPrediction),
+    "</br>",
+    "Actual Temperature:",
+    ifelse(countries@data$TempActuals == 0,
+           "Missing temp data", countries@data$TempActuals),
+   "</br>",
+    "Temperature Difference: ", countries@data$Difference
 ) %>%
     lapply(htmltools::HTML)
 
@@ -94,7 +100,7 @@ server <- function(input, output, session) {
         leaflet(countries) %>%
             setView(lng = 0, lat = 0, zoom = 3) %>%
             addTiles() %>%
-            addPolygons(fillOpacity = 1, fillColor = ~pal(countries$Difference),
+            addPolygons(fillOpacity = 1, fillColor = ~pal(countries@data$Difference),
                         label = mytext,
                         labelOptions = labelOptions( 
                             style = list("font-weight" = "normal", padding = "3px 8px"), 
