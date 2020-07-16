@@ -14,6 +14,13 @@ world_spdf <- readOGR(dsn="/Users/nicklamanna/Documents/App-1/Data/world_shape_f
                       verbose=FALSE
 )
 
+mytext <- paste(
+  "Country: ", world_spdf@data$NAME,"<br/>", 
+  "Area: ", only2017[], "<br/>", 
+  "Population: ", round(world_spdf@data$POP2005, 2), 
+  sep="") %>%
+  lapply(htmltools::HTML)
+
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),

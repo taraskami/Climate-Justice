@@ -5,6 +5,20 @@ library(jsonlite)
 library(rgdal)
 
 
+countries <- readOGR(dsn="./data/world_shape_file", 
+                     layer="TM_WORLD_BORDERS_SIMPL-0.3",
+                     verbose=FALSE)
+
+pal <- colorQuantile(palette="YlOrRd", domain=only2017$Difference)
+
+mytext <- paste(
+    "Country: ", countries$NAME, "</br>",
+    "CO2: ", only2017$CO2, "</br>",
+    "Predicted Temperature:", only2017$TempPrediction, "</br>",
+    "Actual Temperature:", only2017$TempActuals, "</br>",
+    "Temperature Difference: ", countries$Difference
+) %>%
+    lapply(htmltools::HTML)
 
 
 
@@ -39,10 +53,9 @@ ui <- bootstrapPage(
         .btn:hover {
             background-color: #457A60;
         }
-
     "),
     headerPanel(
-            tags$h1("Climate Justice", id = "header", align="center")
+        tags$h1("Climate Justice", id = "header", align="center")
     ),
     
     fluidRow(
@@ -74,9 +87,6 @@ ui <- bootstrapPage(
 
 server <- function(input, output, session) {
     
-    countries <- rgdal::readOGR("custom.geo.json")
-    pal <- colorNumeric("viridis", NULL)
-    
     output$map <- renderLeaflet({
         # Use leaflet() here, and only include aspects of the map that
         # won't need to change dynamically (at least, not unless the
@@ -84,9 +94,13 @@ server <- function(input, output, session) {
         leaflet(countries) %>%
             setView(lng = 0, lat = 0, zoom = 3) %>%
             addTiles() %>%
-            addProviderTiles(providers$Stamen.Toner) %>%
-            addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 0.2,
-                        fillColor = "green")
+            addPolygons(fillOpacity = 1, fillColor = ~pal(countries$Difference),
+                        label = mytext,
+                        labelOptions = labelOptions( 
+                            style = list("font-weight" = "normal", padding = "3px 8px"), 
+                            textsize = "13px", 
+                            direction = "auto"
+                            ))
         
     })
 }
