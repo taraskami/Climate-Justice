@@ -14,6 +14,16 @@ countries@data$TempPrediction <- only2017$TempPrediction
 countries@data$TempActuals <- only2017$TempActuals
 countries@data$Difference <- only2017$Difference
 
+world_spdf <- readOGR(dsn="./Data/world_shape_file", 
+                      layer="TM_WORLD_BORDERS_SIMPL-0.3",
+                      verbose=FALSE
+)
+
+for (i in 12:87) {
+    world_spdf@data[1:246,i][ which(world_spdf@data[1:246,i] == 0)] = NA
+}
+
+
 pal <- colorQuantile(palette="YlOrRd", domain=only2017$Difference)
 
 mytext <- paste(
@@ -73,14 +83,14 @@ ui <- bootstrapPage(
         tags$div(
             id = "filter",
             actionButton("action", "Responsibility Index"),
-            actionButton("action", "CO2 Emissions"),
-            actionButton("action", "Temperature Rise"),
+            actionButton("action2", "CO2 Emissions"),
+            actionButton("action3", "Net Temperature Rise"),
             actionButton("action", "Natural Disaster Fatalities"),
             actionButton("action", "Population"),   
         )
     ),
     
-    leafletOutput("map", width = "100%", height = "100%")
+    leafletOutput("map", width = "100%", height = "100%"),
     
     # absolutePanel(
     #     fixed = TRUE,
@@ -94,9 +104,153 @@ ui <- bootstrapPage(
     #     h2("ZIP explorer"),
     # )
     
+    absolutePanel(top = 130, right = 70,
+                  sliderInput("x", "Year:",min = 1980, max = 2017, value=1980,step=1),textOutput("SliderText"),
+                  checkboxInput("legend", "Show legend", TRUE),
+    )
+    
+    
 )
 
 server <- function(input, output, session) {
+    
+    observeEvent(input$action2, {
+        mybins <- c(0,5,7.5,10,12.5,15,20,40,70)
+        
+        # Reactive expression for the data subsetted to what the user selected
+        filteredData <- reactive({
+            world_spdf@data[1:246,input$x[1]-1968]
+        })
+        
+        # This reactive expression represents the palette function,
+        # which changes as the user makes selections in UI.
+        colorpal <- reactive({
+            colorNumeric(input$colors, quakes$mag)
+        })
+        
+        mytext <- reactive({paste(
+            "Country: ", world_spdf@data$NAME,"<br/>", 
+            "CO2 Emissions Per Capita: ", filteredData(), 
+            sep="") %>%
+                lapply(htmltools::HTML)
+        })
+        
+        output$map <- renderLeaflet({
+            # Use leaflet() here, and only include aspects of the map that
+            # won't need to change dynamically (at least, not unless the
+            # entire map is being torn down and recreated).
+            leaflet(world_spdf) %>% 
+                addTiles()  %>% 
+                setView( lat=10, lng=0 , zoom=2)
+        })
+        
+        # Incremental changes to the map (in this case, replacing the
+        # circles when a new color is chosen) should be performed in
+        # an observer. Each independent set of things that can change
+        # should be managed in its own observer.
+        observe({
+            #pal <- colorpal()
+            
+            mypalette <- colorBin( palette="YlOrBr", domain=filteredData(), na.color="transparent", bins=mybins)
+            leafletProxy("map", data = world_spdf) %>%
+                clearShapes() %>%
+                addPolygons( 
+                    fillColor = ~mypalette(filteredData()),
+                    stroke=TRUE, 
+                    fillOpacity = 0.9, 
+                    color="white", 
+                    weight=0.3,
+                    label = mytext(),
+                    labelOptions = labelOptions( 
+                        style = list("font-weight" = "normal", padding = "3px 8px"), 
+                        textsize = "13px", 
+                        direction = "auto"
+                    ))
+        })
+        
+        # Use a separate observer to recreate the legend as needed.
+        observe({
+            proxy <- leafletProxy("map", data = quakes)
+            
+            # Remove any existing legend, and only if the legend is
+            # enabled, create a new one.
+            proxy %>% clearControls()
+            if (input$legend) {
+                mypalette <- colorBin( palette="YlOrBr", domain=filteredData(), na.color="transparent", bins=mybins)
+                proxy %>% addLegend(pal=mypalette, values=~filteredData(), opacity=0.9, title = "Carbon Emissions Metric Tons Per Capita (CO2)", position = "bottomleft")
+            }
+        })
+    })
+    
+    observeEvent(input$action3, {
+        mybins <- c(0,0.25,0.5,0.75,1,1.25,1.5,2.0,3.0,5.0)
+        
+        filteredData <- reactive({
+            world_spdf@data[1:246,input$x[1]-1930]
+        })
+        
+        # This reactive expression represents the palette function,
+        # which changes as the user makes selections in UI.
+        colorpal <- reactive({
+            colorNumeric(input$colors, quakes$mag)
+        })
+        
+        mytext <- reactive({paste(
+            "Country: ", world_spdf@data$NAME,"<br/>", 
+            "Net Temperature Change in Degrees Celcius: ", filteredData(), 
+            sep="") %>%
+                lapply(htmltools::HTML)
+        })
+        
+        output$map <- renderLeaflet({
+            # Use leaflet() here, and only include aspects of the map that
+            # won't need to change dynamically (at least, not unless the
+            # entire map is being torn down and recreated).
+            leaflet(world_spdf) %>% 
+                addTiles()  %>% 
+                setView( lat=10, lng=0 , zoom=2)
+        })
+        
+        # Incremental changes to the map (in this case, replacing the
+        # circles when a new color is chosen) should be performed in
+        # an observer. Each independent set of things that can change
+        # should be managed in its own observer.
+        observe({
+            #pal <- colorpal()
+            
+            mypalette <- colorBin( palette="YlOrBr", domain=filteredData(), na.color="transparent", bins=mybins)
+            leafletProxy("map", data = world_spdf) %>%
+                clearShapes() %>%
+                addPolygons( 
+                    fillColor = ~mypalette(filteredData()),
+                    stroke=TRUE, 
+                    fillOpacity = 0.9, 
+                    color="white", 
+                    weight=0.3,
+                    label = mytext(),
+                    labelOptions = labelOptions( 
+                        style = list("font-weight" = "normal", padding = "3px 8px"), 
+                        textsize = "13px", 
+                        direction = "auto"
+                    ))
+        })
+        
+        # Use a separate observer to recreate the legend as needed.
+        observe({
+            proxy <- leafletProxy("map", data = quakes)
+            
+            # Remove any existing legend, and only if the legend is
+            # enabled, create a new one.
+            proxy %>% clearControls()
+            if (input$legend) {
+                mypalette <- colorBin( palette="YlOrBr", domain=filteredData(), na.color="transparent", bins=mybins)
+                proxy %>% addLegend(pal=mypalette, values=~filteredData(), opacity=0.9, title = "Net Temperature Change (Degrees Celcius)", position = "bottomleft")
+            }
+        })
+    })
+    
+    
+    
     
     output$map <- renderLeaflet({
         # Use leaflet() here, and only include aspects of the map that
